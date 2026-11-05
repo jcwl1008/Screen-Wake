@@ -6,13 +6,18 @@
 
 ## AutoFlip Simple 版
 
-[下載 ScreenWake_v1_AutoFlip_Simple.apk](downloads/ScreenWake_v1_AutoFlip_Simple.apk)（1.0.4）
+| 版本 | 下載 |
+| --- | --- |
+| **Unslop UI 1.0.5**｜手機設定頁、全螢幕展示快捷入口 | [ScreenWake_v1_AutoFlip_Simple_unslopUI.apk](downloads/ScreenWake_v1_AutoFlip_Simple_unslopUI.apk) |
+| **原版 1.0.4**｜原有設定介面 | [ScreenWake_v1_AutoFlip_Simple.apk](downloads/ScreenWake_v1_AutoFlip_Simple.apk) |
 
-Simple 版首頁以「預覽網頁」為主要按鈕，移除了「開始鎖定展示」及「初始設定」。適合以全螢幕循環展示 Heyzine 電子書的平板。
+兩款 APK 使用同一個 Android 套件名稱，一次可安裝其中一款。同簽署的原版可直接升級到 Unslop UI，沿用網址、前線密碼和翻頁設定。要由 1.0.5 裝回 1.0.4，Android 一般需要先解除安裝，這會清除本機設定。
 
-1. 按「更改展示網址」，輸入 Heyzine 電子書的 HTTPS 網址。
-2. 按「Heyzine 自動翻頁」，開啟功能，設定 **2–300 秒**的翻頁間隔，再儲存。
-3. 按「預覽網頁」開始展示。電子書到尾頁會返到開首，然後繼續翻頁。
+Simple 版適合手機和平板全螢幕循環展示 Heyzine 電子書。以下按鈕名稱以 Unslop UI 版為準。
+
+1. 按「展示網址」，輸入 Heyzine 電子書的 HTTPS 網址。
+2. 按「自動翻頁」，開啟功能，設定 **2–300 秒**的翻頁間隔，再儲存。
+3. 按「開始全螢幕展示」。電子書到尾頁會返到開首，然後繼續翻頁。
 4. 如要更改設定或結束展示，用系統返回鍵或返回手勢開啟前線管理。已設定前線密碼的裝置會要求驗證。
 
 Simple 版可覆蓋安裝同簽署的舊版，沿用已儲存的網址、前線密碼及自動翻頁設定。預覽模式下，Home 和多工仍由 Android 控制。
@@ -46,7 +51,7 @@ Simple 版可覆蓋安裝同簽署的舊版，沿用已儲存的網址、前線�
 
 ## 從原始碼建立
 
-此分支的原始碼會建立 AutoFlip Simple 版。Android Studio 可直接開啟此專案。也可使用 JDK 17、Android SDK Platform 35 與 Build Tools 35.0.0：
+此分支的原始碼會建立 AutoFlip Simple Unslop UI 版。Android Studio 可直接開啟此專案。也可使用 JDK 17、Android SDK Platform 35 與 Build Tools 35.0.0：
 
 ```sh
 export ANDROID_HOME=/path/to/android-sdk
@@ -61,11 +66,16 @@ Windows 腳本位於 [`windows-setup/`](windows-setup/)。Git clone 後先執行
 
 ### AutoFlip Simple edition
 
-[Download ScreenWake_v1_AutoFlip_Simple.apk](downloads/ScreenWake_v1_AutoFlip_Simple.apk) (1.0.4).
+| Edition | Download |
+| --- | --- |
+| **Unslop UI 1.0.5** with phone-friendly settings | [ScreenWake_v1_AutoFlip_Simple_unslopUI.apk](downloads/ScreenWake_v1_AutoFlip_Simple_unslopUI.apk) |
+| **Original 1.0.4** with the original settings interface | [ScreenWake_v1_AutoFlip_Simple.apk](downloads/ScreenWake_v1_AutoFlip_Simple.apk) |
 
-Enter your Heyzine HTTPS flipbook URL, enable **Heyzine Auto Flip**, and set a **2–300 second** interval. Tap **Preview** to start. The last page returns to the beginning and playback continues. Android Back opens staff controls.
+Both APKs share the same Android package. Installing Unslop UI over a same-signed earlier version keeps local settings. To return to 1.0.4, Android normally requires uninstalling 1.0.5 first, which clears those settings.
 
-The Simple home screen puts Preview first and removes the Lock Display and Initial Setup buttons. It can update an earlier APK signed with the same key and retain saved settings. The source on this branch builds the Simple edition. The standard APK and Windows setup instructions are linked above.
+Enter your Heyzine HTTPS flipbook URL, enable **Heyzine Auto Flip**, and set a **2–300 second** interval. Tap **開始全螢幕展示** to start on Unslop UI or **預覽網頁** on the original. The last page returns to the beginning and playback continues. Android Back opens staff controls.
+
+The Simple home screen puts Preview first and removes the Lock Display and Initial Setup buttons. It can update an earlier APK signed with the same key and retain saved settings. The source on this branch builds the Unslop UI edition. The standard APK and Windows setup instructions are linked above.
 
 
 Screen Wake is a native Android browser for showroom tablets, with an Apple-inspired light interface, a configurable HTTPS URL, an awake screen and password-protected staff controls.
