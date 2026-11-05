@@ -1,0 +1,27 @@
+name: Build Screen Wake Unslop UI
+on:
+  push:
+    branches: [unslop-ui-build]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Build and check APK
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          bash build.sh
+          mkdir -p build/export
+          cp build/aligned.apk build/export/
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" build/export/
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging build/aligned.apk | head -4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: screenwake-build
+          path: build/export/
+          retention-days: 3
