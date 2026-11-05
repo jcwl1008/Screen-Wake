@@ -1,0 +1,16 @@
+.gradle/
+build/
+app/build/
+local.properties
+signing/
+
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+password.txt
+*Project_Private*
+windows-setup/platform-tools/
+windows-setup/platform-tools*.zip

@@ -1,0 +1,13 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'hk.jimmy.screenwake'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'hk.jimmy.screenwake'
+        minSdk 28
+        targetSdk 35
+        versionCode 3
+        versionName '1.0.2'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+}
