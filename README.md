@@ -4,6 +4,16 @@
 
 為店頭平板而設的 Android 網頁展示 App。前線自行輸入網址，展示期間保持螢幕常亮，並以密碼保護管理功能。介面採用白底、圓角卡片與藍色按鈕。
 
+## 手機畫面 · Android screenshots
+
+<p>
+  <img src="docs/screenshots/screen-wake-home.png" width="260" alt="Screen Wake 首頁，顯示展示網址、自動翻頁狀態及全螢幕展示按鈕">
+  <img src="docs/screenshots/screen-wake-autoflip.png" width="260" alt="Screen Wake 自動翻頁設定，顯示開關及 8 秒翻頁間隔">
+</p>
+
+AutoFlip Simple Unslop UI v1.0.5，Android 模擬器截圖，使用示範網址。<br>
+Android emulator screenshots of AutoFlip Simple Unslop UI v1.0.5 with a sample URL.
+
 ## AutoFlip Simple 版
 
 | 版本 | 下載 |
