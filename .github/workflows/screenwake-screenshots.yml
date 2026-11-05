@@ -28,11 +28,92 @@ jobs:
             manager="$RUNNER_TEMP/android-tools/cmdline-tools/bin/sdkmanager"
           fi
           yes | "$manager" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
-          "$manager" --sdk_root="$ANDROID_HOME" 'platform-tools' 'emulator' 'system-images;android-34;google_apis;x86_64'
+          image='system-images;android-34;default;x86_64'
+          "$manager" --sdk_root="$ANDROID_HOME" 'platform-tools' 'emulator' "$image" > "$RUNNER_TEMP/sdk.log" 2>&1 || {
+            tail -25 "$RUNNER_TEMP/sdk.log"
+            exit 1
+          }
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          printf 'no\n' | "$(dirname "$manager")/avdmanager" create avd --force --name screenwake --package 'system-images;android-34;google_apis;x86_64' --device pixel_6
-          "$ANDROID_HOME/emulator/emulator" -avd screenwake -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          timeout 90 adb wait-for-device
+          printf 'no\n' | "$(dirname "$manager")/avdmanager" create avd --force --name screenwake --package "$image" --device pixel_6
+          emulator="$ANDROID_HOME/emulator/emulator"
+          "$emulator" -accel-check
+          adb start-server
+          "$emulator" -avd screenwake -port 5554 -no-window -gpu swiftshader -feature -Vulkan -noaudio -no-boot-anim -no-snapshot -memory 2048 -cores 2 > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'tail -100 "$RUNNER_TEMP/emulator.log"' ERR
+          for attempt in {1..60}; do
+            kill -0 "$emulator_pid"
+            if adb devices | grep -qE '^emulator-5554[[:space:]]+device
+          for attempt in {1..100}; do
+            [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != 1 ]] || break
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+      - name: Install published APK and capture real screens
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=hk.jimmy.screenwake
+          adb root
+          adb wait-for-device
+          adb shell wm dismiss-keyguard
+          adb shell wm size 900x1800
+          adb shell wm density 360
+          adb shell settings put system accelerometer_rotation 0
+          adb shell settings put system user_rotation 0
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb shell settings put global sysui_demo_allowed 1
+          adb shell am broadcast -a com.android.systemui.demo -e command enter
+          adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
+          adb install downloads/ScreenWake_v1_AutoFlip_Simple_unslopUI.apk
+          adb shell am start -W -n "$app/.MainActivity"
+          adb shell am force-stop "$app"
+          cat > "$RUNNER_TEMP/screenwake-demo.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+          <map>
+              <string name="url">https://heyzine.com/flip-book/demo.html</string>
+              <boolean name="auto_flip" value="true" />
+              <int name="auto_flip_seconds" value="8" />
+          </map>
+          XML
+          adb push "$RUNNER_TEMP/screenwake-demo.xml" /data/local/tmp/screenwake-demo.xml
+          adb shell "uid=\$(stat -c %u /data/user/0/$app); mkdir -p /data/user/0/$app/shared_prefs; cp /data/local/tmp/screenwake-demo.xml /data/user/0/$app/shared_prefs/screenwake_private.xml; chown -R \$uid:\$uid /data/user/0/$app/shared_prefs; restorecon -RF /data/user/0/$app/shared_prefs"
+          adb shell am start -W -n "$app/.MainActivity"
+          mkdir -p screenshots
+          adb shell uiautomator dump /sdcard/window.xml
+          adb pull /sdcard/window.xml "$RUNNER_TEMP/screenwake-home.xml"
+          python3 - "$RUNNER_TEMP/screenwake-home.xml" <<'PY' > "$RUNNER_TEMP/screenwake-tap"
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1])
+          assert any(n.get("text") == "Screen Wake" for n in root.iter("node"))
+          row = next(n for n in root.iter("node") if n.get("content-desc", "").startswith("自動翻頁"))
+          assert "8" in row.get("content-desc", "")
+          x1, y1, x2, y2 = map(int, re.findall(r"\d+", row.get("bounds")))
+          print((x1 + x2) // 2, (y1 + y2) // 2)
+          PY
+          adb exec-out screencap -p > screenshots/screen-wake-home.png
+          read -r x y < "$RUNNER_TEMP/screenwake-tap"
+          adb shell input tap "$x" "$y"
+          adb shell uiautomator dump /sdcard/window.xml
+          adb pull /sdcard/window.xml "$RUNNER_TEMP/screenwake-autoflip.xml"
+          grep -q '翻頁間隔' "$RUNNER_TEMP/screenwake-autoflip.xml"
+          adb exec-out screencap -p > screenshots/screen-wake-autoflip.png
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: screenwake-screenshots
+          path: screenshots/*.png
+          if-no-files-found: error
+          retention-days: 3
+; then break; fi
+            sleep 2
+          done
+          adb devices
+          timeout 10 adb wait-for-device
           for attempt in {1..100}; do
             [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != 1 ]] || break
             sleep 2
