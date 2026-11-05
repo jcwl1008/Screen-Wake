@@ -29,6 +29,11 @@ public final class MainActivity extends Activity {
     private LinearLayout page;
     private TextView loadStatus;
     private String displayUrl;
+    private final Handler flipHandler = new Handler(Looper.getMainLooper());
+    private final Runnable flipTick = this::runAutoFlip;
+    private boolean resumed, pageLoaded, readerReady;
+    private int flipGeneration;
+    private static final int DEFAULT_FLIP_SECONDS = 8;
     private final ExecutorService crypto = Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle state) {
@@ -84,18 +89,15 @@ public final class MainActivity extends Activity {
             if(passwords.exists()) authenticate(() -> editUrl(this::dashboard)); else editUrl(this::dashboard);
         }),16);
         add(card,text("螢幕常亮  ·  橫直自適應  ·  密碼退出",15,INK,false),24);
+        add(card,button(prefs.getBoolean("auto_flip",false)
+            ? "Heyzine 自動翻頁 · 每 " + flipSeconds() + " 秒" : "Heyzine 自動翻頁 · 關閉",false,() -> {
+            if(passwords.exists()) authenticate(this::editAutoFlip); else editAutoFlip();
+        }),12);
         add(content,card,30);
-        boolean ready = permitted();
-        add(content,text(ready ? "●  展示鎖定已就緒" : "○  展示鎖定尚未設定",15,ready ? Color.rgb(25,130,75) : MUTED,true),24);
-        add(content,text(ready ? "開始後會鎖定此 App；前線可用密碼結束展示。" : "預覽可保持常亮。要限制 Home、多工及通知列，請先完成一次性裝置管理設定。",14,MUTED,false),8);
-        add(content,button(passwords.exists() ? "開始鎖定展示" : "設定密碼並開始",true,() -> ensurePassword(() -> {
-            if (permitted()) startDisplay(true); else setupInfo();
-        })),22);
-        add(content,button("預覽網頁",false,() -> ensurePassword(() -> new AlertDialog.Builder(this)
+        add(content,button("預覽網頁",true,() -> ensurePassword(() -> new AlertDialog.Builder(this)
             .setTitle("進入預覽模式")
             .setMessage("螢幕會保持常亮，但 Home、多工、通知列及電源鍵仍由系統控制。請勿將預覽當作防退出展示。")
-            .setNegativeButton("取消",null).setPositiveButton("開始預覽",(d,w)->startDisplay(false)).show())),12);
-        add(content,button("初始設定",false,this::setupInfo),12);
+            .setNegativeButton("取消",null).setPositiveButton("開始預覽",(d,w)->startDisplay(false)).show())),22);
         if (passwords.exists()) add(content,button("更改前線密碼",false,() -> authenticate(() -> newPassword(this::dashboard))),12);
         if (owner()) add(content,button("移除此 App 的裝置管理",false,() -> authenticate(() ->
             new AlertDialog.Builder(this).setTitle("移除裝置管理？")
@@ -104,26 +106,8 @@ public final class MainActivity extends Activity {
                     try { policy.setLockTaskPackages(admin,new String[]{}); policy.clearDeviceOwnerApp(getPackageName()); dashboard(); }
                     catch(Exception e) { Toast.makeText(this,"未能移除，請聯絡 IT。",Toast.LENGTH_LONG).show(); }
                 }).show())),12);
-        add(content,text("Screen Wake v1  ·  Made for the showroom",12,MUTED,false),25);
+        add(content,text("Screen Wake v1  ·  Auto Flip Simple",12,MUTED,false),25);
         setContentView(scroll);
-    }
-    private void setupInfo() {
-        String status=owner() ? "此 App 已是 Device Owner，可開始鎖定展示。" :
-            policy.isLockTaskPermitted(getPackageName()) ? "管理平台已允許 Lock Task，可開始鎖定展示。" : "尚未取得展示鎖定權限。";
-        LinearLayout box=dialogContent();
-        TextView info=text(status+"\n\n1. 在 Windows 電腦下載並解壓 ScreenWake_v1_Windows_Setup.zip。\n2. 平板啟用 USB 偵錯，以 USB 線連接電腦，並允許偵錯授權。\n3. 電腦開啟 START_SETUP.cmd，選擇平板，再按『開始初始設定』。\n4. 完成後，返回此頁按『重新檢查』。\n\n平板 App 無法自行執行電腦 ADB 指令或授予自己 Device Owner。若已有公司 MDM／Knox 管理，請交由 IT 設定。若因帳戶或裝置狀態而失敗，工具會停止，不會刪除資料。\n\n實體電源鍵及強制重啟無法完全封鎖。",15,INK,false);
-        add(box,info,0); ScrollView scroll=new ScrollView(this); scroll.addView(box);
-        new AlertDialog.Builder(this).setTitle("初始設定 · Windows + USB").setView(scroll)
-            .setNeutralButton("複製 ADB 指令",(d,w)->{
-                android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-                clipboard.setPrimaryClip(ClipData.newPlainText("Screen Wake setup","adb devices\nadb install -r ScreenWake_v1.apk\nadb shell dpm set-device-owner hk.jimmy.screenwake/.AdminReceiver"));
-                Toast.makeText(this,"已複製，請在電腦執行",Toast.LENGTH_LONG).show();
-            }).setNegativeButton("返回",null).setPositiveButton("重新檢查",(d,w)->{
-                dashboard();
-                new AlertDialog.Builder(this).setTitle(permitted() ? "已就緒" : "尚未完成設定")
-                    .setMessage(permitted() ? "可按『開始鎖定展示』。" : "請先在電腦完成設定，或聯絡公司 IT。")
-                    .setPositiveButton("知道了",null).show();
-            }).show();
     }
     private void ensurePassword(Runnable next) { if(passwords.exists()) next.run(); else newPassword(next); }
     private void editUrl(Runnable next) {
@@ -199,7 +183,12 @@ public final class MainActivity extends Activity {
         if(strict) {
             try {
                 if(owner()) { policy.setLockTaskPackages(admin,new String[]{getPackageName()}); policy.setLockTaskFeatures(admin,DevicePolicyManager.LOCK_TASK_FEATURE_NONE); }
-                if(!policy.isLockTaskPermitted(getPackageName())) { setupInfo(); return; }
+                if(!policy.isLockTaskPermitted(getPackageName())) {
+                    new AlertDialog.Builder(this).setTitle("展示鎖定未就緒")
+                        .setMessage("請聯絡 IT 檢查裝置管理設定，或使用預覽網頁。")
+                        .setPositiveButton("知道了",null).show();
+                    return;
+                }
                 startLockTask();
                 ActivityManager am=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
                 if(am.getLockTaskModeState()!=ActivityManager.LOCK_TASK_MODE_LOCKED) {
@@ -224,9 +213,59 @@ public final class MainActivity extends Activity {
     private boolean allowed(Uri uri) {
         return SitePolicy.allows(displayUrl,uri.toString());
     }
-    private void cleanDisplayControls(WebView view,String url) {
+    private boolean isHeyzine(String url) {
+        if(url==null) return false;
         String host=Uri.parse(url).getHost();
-        if(host==null || !(host.equalsIgnoreCase("heyzine.com") || host.toLowerCase(java.util.Locale.ROOT).endsWith(".heyzine.com"))) return;
+        return host!=null && (host.equalsIgnoreCase("heyzine.com") || host.toLowerCase(java.util.Locale.ROOT).endsWith(".heyzine.com"));
+    }
+    private int flipSeconds() { return prefs.getInt("auto_flip_seconds",DEFAULT_FLIP_SECONDS); }
+    private void editAutoFlip() {
+        LinearLayout box=dialogContent();
+        Switch enabled=new Switch(this);
+        enabled.setText("開啟自動翻頁");
+        enabled.setChecked(prefs.getBoolean("auto_flip",false));
+        add(box,enabled,0);
+        add(box,text("翻頁間隔（秒）",15,INK,true),14);
+        EditText seconds=new EditText(this);
+        seconds.setInputType(InputType.TYPE_CLASS_NUMBER);
+        seconds.setText(Integer.toString(flipSeconds()));
+        seconds.setSelectAllOnFocus(true);
+        add(box,seconds,4);
+        add(box,text("可設定 2–300 秒。Heyzine 電子書到尾頁會返回開首，循環播放。",14,MUTED,false),8);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Heyzine 自動翻頁").setView(box)
+            .setNegativeButton("取消",null).setPositiveButton("儲存",null).create();
+        dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            int interval;
+            try { interval=Integer.parseInt(seconds.getText().toString().trim()); }
+            catch(NumberFormatException e) { interval=0; }
+            if(interval<2 || interval>300) { seconds.setError("請輸入 2–300 秒"); return; }
+            prefs.edit().putBoolean("auto_flip",enabled.isChecked()).putInt("auto_flip_seconds",interval).apply();
+            dialog.dismiss();
+            if(showing) resetAutoFlip(); else dashboard();
+        }));
+        dialog.show();
+    }
+    private boolean canAutoFlip() {
+        return resumed && showing && pageLoaded && hasWindowFocus() && web!=null
+            && prefs.getBoolean("auto_flip",false) && isHeyzine(web.getUrl());
+    }
+    private void resetAutoFlip() {
+        flipHandler.removeCallbacks(flipTick);
+        flipGeneration++;
+        readerReady=false;
+        if(canAutoFlip()) flipHandler.post(flipTick);
+    }
+    private void runAutoFlip() {
+        if(!canAutoFlip()) return;
+        int generation=flipGeneration;
+        web.evaluateJavascript(HeyzineAutoFlip.script(readerReady), result->{
+            if(generation!=flipGeneration || !canAutoFlip()) return;
+            readerReady="true".equals(result);
+            flipHandler.postDelayed(flipTick,readerReady ? flipSeconds()*1000L : 1000L);
+        });
+    }
+    private void cleanDisplayControls(WebView view,String url) {
+        if(!isHeyzine(url)) return;
         // The flipbook's controls are part of the website, separate from Android's top bar.
         // Keep page navigation, gestures and page content intact. CSS also covers late-created controls.
         view.evaluateJavascript("(function(){var id='screenwake-clean-display';"
@@ -264,13 +303,19 @@ public final class MainActivity extends Activity {
                 Toast.makeText(MainActivity.this,"展示期間只可瀏覽已設定的網站",Toast.LENGTH_SHORT).show(); return true;
             }
             @Override public void onPageStarted(WebView v,String url,android.graphics.Bitmap icon) {
+                pageLoaded=false;
+                resetAutoFlip();
                 if(!allowed(Uri.parse(url))) { v.stopLoading(); v.loadUrl(displayUrl); return; }
                 loadStatus.setText("正在載入網頁…"); loadStatus.setVisibility(View.VISIBLE);
             }
             @Override public void onPageCommitVisible(WebView v,String url) { cleanDisplayControls(v,url); }
             @Override public void onPageFinished(WebView v,String url) {
                 cleanDisplayControls(v,url);
-                if(loadStatus.getText().toString().equals("正在載入網頁…")) loadStatus.setVisibility(View.GONE);
+                if(loadStatus.getText().toString().equals("正在載入網頁…")) {
+                    loadStatus.setVisibility(View.GONE);
+                    pageLoaded=true;
+                    resetAutoFlip();
+                }
             }
             @Override public void onReceivedError(WebView v,WebResourceRequest r,WebResourceError e) { if(r.isForMainFrame()) loadError(); }
             @Override public void onReceivedHttpError(WebView v,WebResourceRequest r,WebResourceResponse e) { if(r.isForMainFrame()) loadError(); }
@@ -282,15 +327,18 @@ public final class MainActivity extends Activity {
         });
     }
     private void loadError() {
+        pageLoaded=false;
+        resetAutoFlip();
         loadStatus.setText("未能載入網頁。請確認網絡後，點此重新載入。"); loadStatus.setVisibility(View.VISIBLE);
         loadStatus.setTextColor(BLUE); loadStatus.setMinHeight(dp(48));
         loadStatus.setOnClickListener(v->{ loadStatus.setOnClickListener(null); web.loadUrl(displayUrl); });
     }
     private void staffMenu() {
-        new AlertDialog.Builder(this).setTitle("前線管理").setItems(new String[]{"重新載入網頁","更改展示網址","更改密碼","結束展示"},(d,w)->{
+        new AlertDialog.Builder(this).setTitle("前線管理").setItems(new String[]{"重新載入網頁","更改展示網址","更改密碼","Heyzine 自動翻頁","結束展示"},(d,w)->{
             if(w==0) web.loadUrl(displayUrl);
             else if(w==1) editUrl(()->{ web.clearHistory(); web.loadUrl(displayUrl); });
             else if(w==2) newPassword(()->Toast.makeText(this,"密碼已更新",Toast.LENGTH_SHORT).show());
+            else if(w==3) editAutoFlip();
             else endDisplay();
         }).setNegativeButton("返回展示",null).show();
     }
@@ -298,6 +346,8 @@ public final class MainActivity extends Activity {
         try { if(locked) stopLockTask(); }
         catch(Exception e) { Toast.makeText(this,"未能退出展示，請由 IT 檢查政策。",Toast.LENGTH_LONG).show(); return; }
         prefs.edit().putBoolean("session",false).commit();
+        pageLoaded=false;
+        resetAutoFlip();
         if(web!=null) { web.stopLoading(); web.destroy(); web=null; }
         dashboard();
     }
@@ -306,8 +356,8 @@ public final class MainActivity extends Activity {
             |View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
     }
     @Override public void onBackPressed() { if(showing) authenticate(this::staffMenu); else super.onBackPressed(); }
-    @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if(focus) immersive(); }
-    @Override protected void onResume() { super.onResume(); if(web!=null) web.onResume(); immersive(); }
-    @Override protected void onPause() { if(web!=null) web.onPause(); super.onPause(); }
-    @Override protected void onDestroy() { if(web!=null) web.destroy(); crypto.shutdown(); super.onDestroy(); }
+    @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if(focus) immersive(); resetAutoFlip(); }
+    @Override protected void onResume() { super.onResume(); resumed=true; if(web!=null) web.onResume(); immersive(); resetAutoFlip(); }
+    @Override protected void onPause() { resumed=false; resetAutoFlip(); if(web!=null) web.onPause(); super.onPause(); }
+    @Override protected void onDestroy() { resumed=false; resetAutoFlip(); if(web!=null) web.destroy(); crypto.shutdown(); super.onDestroy(); }
 }
