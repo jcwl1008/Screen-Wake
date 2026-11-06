@@ -10,6 +10,8 @@ import android.view.*;
 import android.widget.*;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.Typeface;
+import android.text.SpannableString;
+import android.text.style.TypefaceSpan;
 import java.security.MessageDigest;
 
 public class MainActivity extends Activity {
@@ -35,18 +37,23 @@ public class MainActivity extends Activity {
   private int dp(float n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
   private GradientDrawable background(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
   private Typeface englishFont(boolean bold){
-    // Samsung Sharp Sans is proprietary. Load only if the licensed font assets are supplied.
-    try{return Typeface.createFromAsset(getAssets(),bold?"fonts/SamsungSharpSans-Bold.ttf":"fonts/SamsungSharpSans-Regular.ttf");}
-    catch(Exception missing){return Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL);}
+    // Samsung Sharp Sans is proprietary; Manrope is an OFL-licensed visual alternative.
+    try{
+      Typeface base=Typeface.createFromAsset(getAssets(),"fonts/Manrope.ttf");
+      return Typeface.create(base,bold?700:400,false);
+    }catch(Exception missing){return Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL);}
   }
   private TextView text(String s,int size,int color){
-    TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);
-    if(s.matches(".*[A-Za-z].*"))t.setTypeface(englishFont(false));
+    TextView t=new TextView(this);t.setTextSize(size);t.setTextColor(color);
+    SpannableString styled=new SpannableString(s);
+    java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("[A-Za-z][A-Za-z0-9 ._-]*").matcher(s);
+    while(matcher.find())styled.setSpan(new android.text.style.TypefaceSpan(englishFont(false)),matcher.start(),matcher.end(),33);
+    t.setText(styled);
     return t;
   }
   private void showChangelog(){
     new AlertDialog.Builder(this).setTitle("Screen Wake · 版本更新")
-      .setMessage("v4.2.0｜介面及品牌更新\n• 採用 Screen Wake 風格應用程式圖示\n• 新增版本號碼及更新紀錄\n• 英文標題及字型支援 Samsung Sharp Sans（需提供授權字型）\n\nv4.1.0｜顧客閱讀模式\n• 觸碰螢幕暫停自動翻頁\n• 60 秒沒有操作後恢復\n\nv4.0.0｜Unslop UI\n• 繁體中文、簡潔設定介面\n• 三款翻頁動畫及全螢幕閱讀")
+      .setMessage("v4.3.0｜字體改善\\n• 英文採用開源 Manrope（Samsung Sharp Sans 風格替代）\\n\\nv4.2.0｜介面及品牌更新\n• 採用 Screen Wake 風格應用程式圖示\n• 新增版本號碼及更新紀錄\n• 英文標題及字型支援 Samsung Sharp Sans（需提供授權字型）\n\nv4.1.0｜顧客閱讀模式\n• 觸碰螢幕暫停自動翻頁\n• 60 秒沒有操作後恢復\n\nv4.0.0｜Unslop UI\n• 繁體中文、簡潔設定介面\n• 三款翻頁動畫及全螢幕閱讀")
       .setPositiveButton("關閉",null).show();
   }
   private void addSpace(LinearLayout parent,int height){View v=new View(this);parent.addView(v,new LinearLayout.LayoutParams(1,dp(height)));}
@@ -92,8 +99,8 @@ public class MainActivity extends Activity {
     controls=new LinearLayout(this);controls.setOrientation(LinearLayout.VERTICAL);root.addView(controls);
     TextView title=text("Screen Wake",28,0xff252B32);title.setTypeface(englishFont(true));controls.addView(title);
     TextView sub=text("PDF 自動翻頁",14,0xff68717A);controls.addView(sub);
-    TextView version=text("版本 v4.2.0  ·  查看更新紀錄",12,0xff4263A3);
-    version.setPadding(0,dp(10),0,dp(8));version.setContentDescription("版本 4.2.0，按此查看更新紀錄");
+    TextView version=text("版本 v4.3.0  ·  查看更新紀錄",12,0xff4263A3);
+    version.setPadding(0,dp(10),0,dp(8));version.setContentDescription("版本 4.3.0，按此查看更新紀錄");
     version.setOnClickListener(v->showChangelog());controls.addView(version);addSpace(controls,12);
     heading(controls,"目前文件");addSpace(controls,12);
     action(controls,"選擇 PDF 文件",false,()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/pdf");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK);});
