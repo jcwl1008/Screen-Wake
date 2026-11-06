@@ -1,12 +1,12 @@
 # Screen Wake
 
-## PDF Auto Flip · Unslop UI v4.0.0
+## PDF Auto Flip · Unslop UI v4.1.0
 
 獨立 PDF 閱讀版本，毋須 Heyzine 或網絡連線。支援匯入本機 PDF、2–300 秒自動翻頁、尾頁循環、全螢幕閱讀、4–8 位 PIN 密碼，以及滑動／淡入淡出／模擬立體翻頁三種效果。設定頁採用暖白、石墨灰與低調藍色，並使用繁體中文。
 
-**[⬇️ 下載 ScreenWake_Simple_AutoFlip_PDF_Unslop.apk](https://github.com/jcwl1008/Screen-Wake/releases/download/pdf-unslop-v4.0.0/ScreenWake_Simple_AutoFlip_PDF_Unslop.apk)**
+**[⬇️ 下載 ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.1.apk](https://github.com/jcwl1008/Screen-Wake/releases/download/pdf-unslop-v4.1.0/ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.1.apk)**
 
-### PDF 版介面預覽
+**顧客閱讀模式（v4.1 新增）：** 全螢幕自動展示期間，顧客觸碰 PDF 頁面即暫停自動翻頁；每次再觸碰會重新計算 60 秒。連續 60 秒無觸碰後自動恢復，並按原先設定的翻頁間隔繼續。手動關閉自動翻頁時，不會自行恢復。\n\n### PDF 版介面預覽
 
 ![Screen Wake PDF Unslop UI 設定頁示意圖](docs/screenshots/pdf-unslop-ui-preview.svg)
 
