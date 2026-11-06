@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
   }
   private void showChangelog(){
     new AlertDialog.Builder(this).setTitle("Screen Wake · 版本更新")
-      .setMessage("v4.3.0｜字體改善\\n• 英文採用開源 Manrope（Samsung Sharp Sans 風格替代）\\n\\nv4.2.0｜介面及品牌更新\n• 採用 Screen Wake 風格應用程式圖示\n• 新增版本號碼及更新紀錄\n• 英文標題及字型支援 Samsung Sharp Sans（需提供授權字型）\n\nv4.1.0｜顧客閱讀模式\n• 觸碰螢幕暫停自動翻頁\n• 60 秒沒有操作後恢復\n\nv4.0.0｜Unslop UI\n• 繁體中文、簡潔設定介面\n• 三款翻頁動畫及全螢幕閱讀")
+      .setMessage("v4.3.0｜字體改善\n• 英文使用開源 Manrope 字體（並非 Samsung Sharp Sans）\n\nv4.2.0｜介面及品牌更新\n• Screen Wake 風格 App 圖示\n• 可點擊版本號碼及更新紀錄\n\nv4.1.0｜顧客閱讀模式\n• 觸碰暫停自動翻頁\n• 閒置 60 秒自動恢復\n\nv4.0.0｜Unslop UI\n• 繁體中文簡潔介面、三款翻頁效果")
       .setPositiveButton("關閉",null).show();
   }
   private void addSpace(LinearLayout parent,int height){View v=new View(this);parent.addView(v,new LinearLayout.LayoutParams(1,dp(height)));}
