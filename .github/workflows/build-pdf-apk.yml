@@ -5,6 +5,8 @@ on:
       - 'pdf-edition/**'
       - '.github/workflows/build-pdf-apk.yml'
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,3 +35,8 @@ jobs:
         with:
           name: ScreenWake_Simple_AutoFlip_PDF_Unslop
           path: pdf-edition/ScreenWake_Simple_AutoFlip_PDF_Unslop.apk
+      - name: Publish installable APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create pdf-unslop-v4.0.0 ScreenWake_Simple_AutoFlip_PDF_Unslop.apk --repo "$GITHUB_REPOSITORY" --title "Screen Wake PDF · Unslop UI v4.0.0" --notes "繁體中文 PDF 閱讀器：簡潔設定介面、三款翻頁動畫、自動循環、PIN 密碼保護及全螢幕閱讀。Android 9+。此為 GitHub Actions debug 簽署版本，請先在實機測試。" --latest=false --clobber
