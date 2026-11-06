@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+<rect width="390" height="844" fill="#F7F7F5"/>
+<rect x="8" y="8" width="374" height="828" rx="30" fill="#F7F7F5" stroke="#CDD0CD"/>
+<g font-family="Noto Sans CJK TC, Microsoft JhengHei, sans-serif">
+<text x="32" y="72" font-size="28" font-weight="700" fill="#252B32">Screen Wake</text>
+<text x="32" y="98" font-size="14" fill="#68717A">PDF 自動翻頁</text>
+<rect x="32" y="124" width="326" height="210" rx="12" fill="#E9EAE7"/>
+<rect x="114" y="139" width="162" height="180" rx="2" fill="#fff"/>
+<text x="195" y="221" font-size="16" text-anchor="middle" fill="#68717A">PDF 預覽</text>
+<text x="32" y="369" font-size="13" font-weight="700" fill="#68717A">目前文件</text>
+<rect x="32" y="381" width="326" height="52" rx="12" fill="#ECEDEB"/>
+<text x="195" y="413" font-size="16" text-anchor="middle" fill="#29313B">選擇 PDF 文件</text>
+<text x="32" y="456" font-size="14" fill="#68717A">尚未選擇 PDF</text>
+<text x="32" y="491" font-size="13" font-weight="700" fill="#68717A">翻頁間隔</text>
+<text x="32" y="520" font-size="18" font-weight="700" fill="#252B32">每隔 8 秒</text>
+<rect x="32" y="542" width="326" height="4" rx="2" fill="#D5D8D8"/>
+<rect x="32" y="542" width="28" height="4" rx="2" fill="#4263A3"/>
+<circle cx="60" cy="544" r="10" fill="#4263A3"/>
+<text x="32" y="570" font-size="12" fill="#68717A">2 至 300 秒 · 最後一頁自動循環</text>
+<text x="32" y="605" font-size="13" font-weight="700" fill="#68717A">翻頁效果</text>
+<rect x="32" y="618" width="103" height="48" rx="10" fill="#4263A3"/>
+<rect x="143" y="618" width="103" height="48" rx="10" fill="#ECEDEB"/>
+<rect x="254" y="618" width="104" height="48" rx="10" fill="#ECEDEB"/>
+<text x="83" y="647" font-size="13" text-anchor="middle" fill="white">滑動翻頁</text>
+<text x="194" y="647" font-size="13" text-anchor="middle" fill="#29313B">淡入淡出</text>
+<text x="306" y="647" font-size="12" text-anchor="middle" fill="#29313B">模擬立體翻頁</text>
+<rect x="32" y="692" width="326" height="52" rx="12" fill="#4263A3"/>
+<text x="195" y="725" font-size="16" text-anchor="middle" fill="white">開始展示</text>
+<rect x="32" y="754" width="326" height="52" rx="12" fill="#ECEDEB"/>
+<text x="195" y="786" font-size="16" text-anchor="middle" fill="#29313B">全螢幕預覽</text>
+</g>
+</svg>
