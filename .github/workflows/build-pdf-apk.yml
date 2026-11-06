@@ -19,9 +19,11 @@ jobs:
           java-version: '17'
       - name: Configure Android SDK
         run: |
+          export ANDROID_HOME=/usr/local/lib/android/sdk
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
-          yes | sdkmanager --licenses || true
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
+          yes | "$SDKMANAGER" --licenses || true
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
