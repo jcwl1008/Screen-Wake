@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
   private boolean fullscreen=false;
   private TextView status, intervalText, playButton, modeButton, lockButton;
   private SeekBar intervalBar;
-  private int 秒=8,page=0,mode=0;
+  private int seconds=8,page=0,mode=0;
   private boolean playing=false,locked=false;
   private final String[] modes={"滑動翻頁","淡入淡出","模擬立體翻頁"};
   private final Runnable tick=new Runnable(){public void run(){if(playing && !locked && pdf!=null){book.advance();handler.postDelayed(this,seconds*1000L);}}};
@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
   private void lockNow(){if(savedPin().isEmpty()){setupPin();return;}locked=true;playing=false;playButton.setText("開始自動翻頁");timer();controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
   private void setupPin(){
     final EditText input=new EditText(this);input.setInputType(18);input.setHint("4–8 位數字密碼");input.setSingleLine(true);
-    new AlertDialog.Builder(this).setTitle(savedPin().isEmpty()?"設定密碼":"更改密碼").setMessage("Use a 4–8 位數字密碼 to protect the reader. Keep it safe; there is no PIN recovery.").setView(input).setNegativeButton("取消",null).setPositiveButton("儲存",(d,w)->{
+    new AlertDialog.Builder(this).setTitle(savedPin().isEmpty()?"設定密碼":"更改密碼").setMessage("請設定 4 至 8 位數字密碼。請妥善保管，密碼無法復原。").setView(input).setNegativeButton("取消",null).setPositiveButton("儲存",(d,w)->{
       String pin=input.getText().toString();if(!pin.matches("[0-9]{4,8}")){toast("密碼必須為 4 至 8 位數字");return;}
       getPreferences(0).edit().putString("pin",hash(pin)).apply();lockButton.setText("鎖定閱讀器");toast("密碼已儲存");
     }).show();
@@ -124,6 +124,20 @@ public class MainActivity extends Activity {
       Bitmap b=Bitmap.createBitmap(Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),Bitmap.Config.ARGB_8888);
       b.eraseColor(Color.WHITE);p.render(b,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);return b;
     }catch(Exception e){return null;}
+  }
+  private void enterFullscreen(){
+    if(fullscreen||pdf==null)return;
+    fullscreen=true;root.removeView(book);scroll.setVisibility(View.GONE);
+    book.setBackgroundColor(Color.BLACK);
+    screen.addView(book,new FrameLayout.LayoutParams(-1,-1));
+    getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
+    book.invalidate();
+  }
+  private void exitFullscreen(){
+    if(!fullscreen)return;
+    fullscreen=false;screen.removeView(book);root.addView(book,new LinearLayout.LayoutParams(-1,dp(280)));
+    book.setBackground(background(0xffe8ecf3,16));scroll.setVisibility(View.VISIBLE);
+    getWindow().getDecorView().setSystemUiVisibility(0);book.invalidate();
   }
   @Override public void onBackPressed(){
     if(fullscreen&&!locked){exitFullscreen();}
