@@ -1,28 +1,166 @@
 package hk.screenwake.pdf;
-import android.app.*; import android.os.*; import android.content.*; import android.graphics.*; import android.graphics.pdf.PdfRenderer; import android.net.Uri; import android.view.*; import android.widget.*; import android.os.ParcelFileDescriptor; import android.graphics.drawable.GradientDrawable;
+
+import android.app.*;
+import android.os.*;
+import android.content.*;
+import android.graphics.*;
+import android.graphics.pdf.PdfRenderer;
+import android.net.Uri;
+import android.view.*;
+import android.widget.*;
+import android.graphics.drawable.GradientDrawable;
+import java.security.MessageDigest;
+
 public class MainActivity extends Activity {
- static final int PICK=77; PdfRenderer pdf; ParcelFileDescriptor fd; BookView book; LinearLayout controls; TextView status,interval,play; Handler handler=new Handler(); int seconds=8,page=0; boolean playing=false;
- final Runnable tick=new Runnable(){public void run(){if(playing&&pdf!=null){book.flip();handler.postDelayed(this,seconds*1000L);}}};
- GradientDrawable bg(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(22);return d;}
- TextView button(String label,LinearLayout parent,Runnable action){TextView v=new TextView(this);v.setText(label);v.setTextColor(-1);v.setTextSize(16);v.setGravity(17);v.setPadding(18,22,18,22);v.setBackground(bg(0xff3659d9));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,12,0,0);parent.addView(v,lp);v.setOnClickListener(w->action.run());return v;}
- @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().addFlags(128);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(22,20,22,20);root.setBackgroundColor(0xfff7f8fa);setContentView(root);controls=new LinearLayout(this);controls.setOrientation(1);root.addView(controls);
- TextView title=new TextView(this);title.setText("Screen Wake  ·  PDF");title.setTextSize(26);title.setTextColor(0xff17191f);controls.addView(title);
- button("Import PDF",controls,()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/pdf");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK);});
- status=new TextView(this);status.setText("Choose a PDF to begin");status.setTextColor(0xff525866);status.setPadding(0,20,0,16);controls.addView(status);
- interval=new TextView(this);interval.setText("Auto flip interval · 8 seconds");interval.setTextSize(16);controls.addView(interval);
- SeekBar bar=new SeekBar(this);bar.setMax(298);bar.setProgress(6);controls.addView(bar);bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int n,boolean user){seconds=n+2;interval.setText("Auto flip interval · "+seconds+" seconds");if(playing)timer();}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});
- play=button("Start Auto Flip",controls,()->{playing=!playing;play.setText(playing?"Pause Auto Flip":"Start Auto Flip");timer();});
- button("Full Screen Reader",controls,()->{if(pdf!=null){controls.setVisibility(View.GONE);getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);}});
- book=new BookView(this);root.addView(book,new LinearLayout.LayoutParams(-1,0,1));book.setOnClickListener(v->{if(pdf!=null)book.flip();});
- }
- void timer(){handler.removeCallbacks(tick);if(playing&&pdf!=null)handler.postDelayed(tick,seconds*1000L);}
- @Override protected void onActivityResult(int req,int res,Intent data){super.onActivityResult(req,res,data);if(req!=PICK||res!=RESULT_OK||data==null)return;try{Uri u=data.getData();getContentResolver().takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION);if(pdf!=null)pdf.close();if(fd!=null)fd.close();fd=getContentResolver().openFileDescriptor(u,"r");pdf=new PdfRenderer(fd);page=0;book.clear();book.invalidate();status.setText(pdf.getPageCount()+" pages · ready");timer();}catch(Exception e){new AlertDialog.Builder(this).setMessage("Cannot open PDF: "+e.getMessage()).setPositiveButton("OK",null).show();}}
- Bitmap render(int n){if(pdf==null)return null;try(PdfRenderer.Page p=pdf.openPage(n)){int w=p.getWidth(),h=p.getHeight();float s=Math.min(2f,1600f/Math.max(w,h));Bitmap b=Bitmap.createBitmap(Math.max(1,(int)(w*s)),Math.max(1,(int)(h*s)),Bitmap.Config.ARGB_8888);b.eraseColor(-1);p.render(b,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);return b;}catch(Exception e){return null;}}
- @Override public void onBackPressed(){if(controls.getVisibility()==View.GONE){controls.setVisibility(View.VISIBLE);getWindow().getDecorView().setSystemUiVisibility(0);}else super.onBackPressed();}
- @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);book.clear();if(pdf!=null)pdf.close();try{if(fd!=null)fd.close();}catch(Exception ignored){}super.onDestroy();}
- class BookView extends View {Bitmap current,next;boolean animating=false;long start;Paint paint=new Paint(3);Camera camera=new Camera();Matrix matrix=new Matrix();BookView(Context c){super(c);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}void clear(){if(current!=null)current.recycle();if(next!=null)next.recycle();current=null;next=null;animating=false;}
- void flip(){if(pdf==null||animating)return;current=render(page);next=render((page+1)%pdf.getPageCount());if(current==null||next==null){clear();return;}animating=true;start=SystemClock.uptimeMillis();invalidate();}
- @Override protected void onDraw(Canvas c){super.onDraw(c);c.drawColor(0xffe8eaf0);if(pdf==null){paint.setColor(0xff8c919d);paint.setTextSize(32);c.drawText("PDF Preview",40,getHeight()/2f,paint);return;}Bitmap a=animating?current:render(page);if(a==null)return;float scale=Math.min((float)getWidth()/a.getWidth(),(float)getHeight()/a.getHeight());float bw=a.getWidth()*scale,bh=a.getHeight()*scale,x=(getWidth()-bw)/2,y=(getHeight()-bh)/2;paint.setColor(-1);paint.setAlpha(255);
- if(animating){float t=Math.min(1f,(SystemClock.uptimeMillis()-start)/850f);float eased=t*t*(3-2*t);c.drawBitmap(next,null,new RectF(x,y,x+bw,y+bh),paint);c.save();camera.save();camera.setLocation(0,0,-12);camera.rotateY(-180*eased);camera.getMatrix(matrix);camera.restore();matrix.preTranslate(-bw/2,-bh/2);matrix.postTranslate(x+bw/2,y+bh/2);c.concat(matrix);c.drawBitmap(a,null,new RectF(0,0,bw,bh),paint);paint.setColor(0x33000000);c.drawRect(0,0,bw*(0.1f+0.25f*(float)Math.sin(Math.PI*t)),bh,paint);c.restore();if(t>=1){page=(page+1)%pdf.getPageCount();clear();}postInvalidateDelayed(16);}else{c.drawBitmap(a,null,new RectF(x,y,x+bw,y+bh),paint);a.recycle();}}
- }
+  private static final int PICK=77;
+  private final Handler handler=new Handler();
+  private PdfRenderer pdf;
+  private ParcelFileDescriptor fd;
+  private BookView book;
+  private LinearLayout controls;
+  private TextView status, intervalText, playButton, modeButton, lockButton;
+  private SeekBar intervalBar;
+  private int seconds=8,page=0,mode=0;
+  private boolean playing=false,locked=false;
+  private final String[] modes={"Slide","Fade","3D Flip"};
+  private final Runnable tick=new Runnable(){public void run(){if(playing && !locked && pdf!=null){book.advance();handler.postDelayed(this,seconds*1000L);}}};
+
+  private int dp(float n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
+  private GradientDrawable background(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
+  private TextView text(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
+  private void addSpace(LinearLayout parent,int height){View v=new View(this);parent.addView(v,new LinearLayout.LayoutParams(1,dp(height)));}
+  private TextView action(LinearLayout parent,String label,boolean primary,Runnable click){
+    TextView t=text(label,16,primary?Color.WHITE:0xff202a3b);
+    t.setGravity(Gravity.CENTER);t.setMinHeight(dp(54));t.setBackground(background(primary?0xff2858d7:0xffe9edf4,14));
+    parent.addView(t,new LinearLayout.LayoutParams(-1,dp(54)));t.setOnClickListener(v->click.run());return t;
+  }
+  private void heading(LinearLayout parent,String s){TextView t=text(s,13,0xff637083);t.setLetterSpacing(0.07f);parent.addView(t);}
+  private void updateStatus(){status.setText(pdf==null?"No PDF selected":pdf.getPageCount()+" pages  ·  Page "+(page+1)+" of "+pdf.getPageCount());}
+  private void timer(){handler.removeCallbacks(tick);if(playing&&!locked&&pdf!=null)handler.postDelayed(tick,seconds*1000L);}
+  private String hash(String pin){try{byte[] b=MessageDigest.getInstance("SHA-256").digest(("ScreenWake-v2:"+pin).getBytes("UTF-8"));StringBuilder sb=new StringBuilder();for(byte v:b)sb.append(String.format("%02x",v&255));return sb.toString();}catch(Exception e){return "";}}
+  private String savedPin(){return getPreferences(0).getString("pin","");}
+  private void lockNow(){if(savedPin().isEmpty()){setupPin();return;}locked=true;playing=false;playButton.setText("Start auto flip");timer();controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
+  private void setupPin(){
+    final EditText input=new EditText(this);input.setInputType(18);input.setHint("4–8 digit PIN");input.setSingleLine(true);
+    new AlertDialog.Builder(this).setTitle(savedPin().isEmpty()?"Set a password":"Change password").setMessage("Use a 4–8 digit PIN to protect the reader. Keep it safe; there is no PIN recovery.").setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{
+      String pin=input.getText().toString();if(!pin.matches("[0-9]{4,8}")){toast("PIN must be 4–8 digits");return;}
+      getPreferences(0).edit().putString("pin",hash(pin)).apply();lockButton.setText("Lock reader");toast("PIN saved");
+    }).show();
+  }
+  private void showPinPrompt(boolean canExit){
+    final EditText input=new EditText(this);input.setInputType(18);input.setHint("Enter PIN");
+    AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Reader locked").setMessage("Enter your PIN to unlock Screen Wake.").setView(input).setCancelable(false)
+      .setPositiveButton("Unlock",null).setNegativeButton("Exit",(d,w)->finish()).create();
+    dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{
+      if(hash(input.getText().toString()).equals(savedPin())){locked=false;controls.setVisibility(View.VISIBLE);book.setVisibility(View.VISIBLE);dialog.dismiss();}
+      else{input.setText("");input.setError("Incorrect PIN");}
+    }));dialog.show();
+  }
+  private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
+  @Override public void onCreate(Bundle state){
+    super.onCreate(state);getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    mode=getPreferences(0).getInt("mode",0);seconds=getPreferences(0).getInt("interval",8);
+    ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(0xfff8f9fc);
+    LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(22),dp(24),dp(22),dp(20));scroll.addView(root);setContentView(scroll);
+    controls=new LinearLayout(this);controls.setOrientation(LinearLayout.VERTICAL);root.addView(controls);
+    TextView title=text("Screen Wake",29,0xff152238);title.setTypeface(null,1);controls.addView(title);
+    TextView sub=text("PDF Reader  ·  v2",14,0xff6a7587);controls.addView(sub);addSpace(controls,26);
+    heading(controls,"YOUR DOCUMENT");addSpace(controls,10);
+    action(controls,"Choose PDF",true,()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/pdf");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK);});
+    addSpace(controls,10);status=text("No PDF selected",14,0xff647084);controls.addView(status);addSpace(controls,24);
+    heading(controls,"AUTO PAGE TURN");addSpace(controls,12);
+    intervalText=text("Every "+seconds+" seconds",17,0xff1b2940);intervalText.setTypeface(null,1);controls.addView(intervalText);
+    intervalBar=new SeekBar(this);intervalBar.setMax(298);intervalBar.setProgress(seconds-2);controls.addView(intervalBar);
+    intervalBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+      public void onProgressChanged(SeekBar b,int value,boolean user){seconds=value+2;intervalText.setText("Every "+seconds+" seconds");if(user){getPreferences(0).edit().putInt("interval",seconds).apply();timer();}}
+      public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
+    });
+    TextView hint=text("2–300 seconds between pages",12,0xff788395);controls.addView(hint);addSpace(controls,22);
+    heading(controls,"PAGE ANIMATION");addSpace(controls,10);
+    modeButton=action(controls,modes[mode]+"  ·  Change style",false,()->{
+      new AlertDialog.Builder(this).setTitle("Choose page animation").setSingleChoiceItems(modes,mode,(d,which)->{
+        mode=which;getPreferences(0).edit().putInt("mode",mode).apply();modeButton.setText(modes[mode]+"  ·  Change style");d.dismiss();
+      }).setNegativeButton("Cancel",null).show();
+    });
+    addSpace(controls,24);
+    playButton=action(controls,"Start auto flip",true,()->{
+      if(pdf==null){toast("Choose a PDF first");return;}playing=!playing;playButton.setText(playing?"Pause auto flip":"Start auto flip");timer();
+    });
+    addSpace(controls,10);
+    action(controls,"Open full screen",false,()->{
+      if(pdf==null){toast("Choose a PDF first");return;}
+      controls.setVisibility(View.GONE);getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
+    });
+    addSpace(controls,26);heading(controls,"PRIVACY");addSpace(controls,10);
+    lockButton=action(controls,savedPin().isEmpty()?"Set password":"Lock reader",false,()->lockNow());
+    TextView privacy=text("PIN protection for this reader",12,0xff788395);privacy.setPadding(0,dp(8),0,0);controls.addView(privacy);
+    if(!savedPin().isEmpty()){addSpace(controls,10);action(controls,"Change PIN",false,()->{
+      final EditText old=new EditText(this);old.setInputType(18);old.setHint("Current PIN");
+      new AlertDialog.Builder(this).setTitle("Verify current PIN").setView(old).setNegativeButton("Cancel",null).setPositiveButton("Continue",(d,w)->{
+        if(hash(old.getText().toString()).equals(savedPin()))setupPin();else toast("Incorrect PIN");
+      }).show();
+    });}
+    addSpace(root,24);
+    book=new BookView(this);book.setBackground(background(0xffe8ecf3,16));
+    root.addView(book,new LinearLayout.LayoutParams(-1,dp(280)));
+    book.setOnClickListener(v->{if(pdf!=null&&!locked)book.advance();});
+    if(!savedPin().isEmpty()){locked=true;controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
+  }
+  @Override protected void onActivityResult(int request,int result,Intent data){
+    super.onActivityResult(request,result,data);if(request!=PICK||result!=RESULT_OK||data==null)return;
+    try{
+      Uri uri=data.getData();getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);
+      if(pdf!=null)pdf.close();if(fd!=null)fd.close();
+      fd=getContentResolver().openFileDescriptor(uri,"r");pdf=new PdfRenderer(fd);page=0;playing=false;playButton.setText("Start auto flip");book.clear();book.loadPage();updateStatus();timer();
+    }catch(Exception e){new AlertDialog.Builder(this).setMessage("Unable to open PDF: "+e.getMessage()).setPositiveButton("OK",null).show();}
+  }
+  private Bitmap render(int n){
+    if(pdf==null)return null;
+    try(PdfRenderer.Page p=pdf.openPage(n)){
+      int w=p.getWidth(),h=p.getHeight();float scale=Math.min(2f,1800f/Math.max(w,h));
+      Bitmap b=Bitmap.createBitmap(Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),Bitmap.Config.ARGB_8888);
+      b.eraseColor(Color.WHITE);p.render(b,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);return b;
+    }catch(Exception e){return null;}
+  }
+  @Override public void onBackPressed(){
+    if(controls.getVisibility()==View.GONE&&!locked){controls.setVisibility(View.VISIBLE);getWindow().getDecorView().setSystemUiVisibility(0);}
+    else super.onBackPressed();
+  }
+  @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(book!=null)book.clear();if(pdf!=null)pdf.close();try{if(fd!=null)fd.close();}catch(Exception ignored){}super.onDestroy();}
+  private class BookView extends View {
+    private Bitmap current,next;private boolean animating=false;private long started;
+    private final Paint paint=new Paint(3);
+    BookView(Context c){super(c);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+    void clear(){if(current!=null&&!current.isRecycled())current.recycle();if(next!=null&&!next.isRecycled())next.recycle();current=null;next=null;animating=false;invalidate();}
+    void loadPage(){if(current!=null&&!current.isRecycled())current.recycle();current=render(page);invalidate();}
+    void advance(){
+      if(pdf==null||animating)return;
+      if(current==null)current=render(page);
+      next=render((page+1)%pdf.getPageCount());if(next==null)return;
+      animating=true;started=SystemClock.uptimeMillis();invalidate();
+    }
+    private void bitmap(Canvas canvas,Bitmap b,float x,float y,float w,float h){if(b!=null&&!b.isRecycled())canvas.drawBitmap(b,null,new RectF(x,y,x+w,y+h),paint);}
+    @Override protected void onDraw(Canvas c){
+      super.onDraw(c);c.drawColor(0xffe8ecf3);
+      if(current==null){paint.setColor(0xff8995a7);paint.setTextSize(dp(16));c.drawText("PDF preview",dp(20),getHeight()/2f,paint);return;}
+      float scale=Math.min((float)getWidth()/current.getWidth(),(float)getHeight()/current.getHeight());
+      float w=current.getWidth()*scale,h=current.getHeight()*scale,x=(getWidth()-w)/2,y=(getHeight()-h)/2;
+      paint.setColor(Color.WHITE);paint.setAlpha(255);
+      if(!animating){bitmap(c,current,x,y,w,h);return;}
+      float t=Math.min(1f,(SystemClock.uptimeMillis()-started)/550f);
+      float eased=t*t*(3-2*t);
+      if(mode==0){
+        bitmap(c,current,x-w*eased,y,w,h);bitmap(c,next,x+w*(1-eased),y,w,h);
+      }else if(mode==1){
+        bitmap(c,current,x,y,w,h);paint.setAlpha((int)(255*eased));bitmap(c,next,x,y,w,h);paint.setAlpha(255);
+      }else{
+        bitmap(c,next,x,y,w,h);
+        c.save();c.clipRect(x,y,x+w*(1-eased),y+h);
+        bitmap(c,current,x,y,w,h);c.restore();
+        paint.setColor(0x33000000);c.drawRect(x+w*(1-eased)-dp(5),y,x+w*(1-eased),y+h,paint);paint.setColor(Color.WHITE);
+      }
+      if(t>=1f){if(current!=null)current.recycle();current=next;next=null;page=(page+1)%pdf.getPageCount();animating=false;updateStatus();}
+      else postInvalidateDelayed(16);
+    }
+  }
 }
