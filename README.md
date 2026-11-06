@@ -1,12 +1,12 @@
 # Screen Wake
 
-## PDF Auto Flip · Unslop UI v4.2.0
+## PDF Auto Flip · Unslop UI v4.3.0
 
 獨立 PDF 閱讀版本，毋須 Heyzine 或網絡連線。支援匯入本機 PDF、2–300 秒自動翻頁、尾頁循環、全螢幕閱讀、4–8 位 PIN 密碼，以及滑動／淡入淡出／模擬立體翻頁三種效果。設定頁採用暖白、石墨灰與低調藍色，並使用繁體中文。
 
-**[⬇️ 下載 ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.2.apk](https://github.com/jcwl1008/Screen-Wake/releases/download/pdf-unslop-v4.2.0/ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.2.apk)**
+**[⬇️ 下載 ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.3.apk](https://github.com/jcwl1008/Screen-Wake/releases/download/pdf-unslop-v4.3.0/ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.3.apk)**
 
-**v4.2 更新：** 改用 Screen Wake 品牌風格的 Android 圖示，設定頁加入可點擊版本號及繁體中文更新紀錄。英文標題支援 Samsung Sharp Sans Bold、英文文字支援 Samsung Sharp Sans Regular；由於字型受授權保護，公開版未附字型檔，會使用 Android 系統字型作後備。\n\n**顧客閱讀模式（v4.1 新增）：** 全螢幕自動展示期間，顧客觸碰 PDF 頁面即暫停自動翻頁；每次再觸碰會重新計算 60 秒。連續 60 秒無觸碰後自動恢復，並按原先設定的翻頁間隔繼續。手動關閉自動翻頁時，不會自行恢復。\n\n### PDF 版介面預覽
+**v4.3 字體更新：** 已在 APK 打包開源 OFL 授權的 Manrope 英文字體（Regular / Bold 權重），令英文介面更接近 Sharp Sans 的簡潔風格。**Manrope 並非 Samsung Sharp Sans**；Samsung 品牌字體的第三方來源未能證實有權供公開 APK 再發佈。字體來源：[Google Fonts Manrope](https://github.com/google/fonts/tree/main/ofl/manrope)，授權：[SIL OFL](https://github.com/google/fonts/blob/main/ofl/manrope/OFL.txt)。\n\n**v4.2 更新：** 改用 Screen Wake 品牌風格的 Android 圖示，設定頁加入可點擊版本號及繁體中文更新紀錄。英文標題支援 Samsung Sharp Sans Bold、英文文字支援 Samsung Sharp Sans Regular；由於字型受授權保護，公開版未附字型檔，會使用 Android 系統字型作後備。\n\n**顧客閱讀模式（v4.1 新增）：** 全螢幕自動展示期間，顧客觸碰 PDF 頁面即暫停自動翻頁；每次再觸碰會重新計算 60 秒。連續 60 秒無觸碰後自動恢復，並按原先設定的翻頁間隔繼續。手動關閉自動翻頁時，不會自行恢復。\n\n### PDF 版介面預覽
 
 ![Screen Wake PDF Unslop UI 設定頁示意圖](docs/screenshots/pdf-unslop-ui-preview.svg)
 
