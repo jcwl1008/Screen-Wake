@@ -25,9 +25,11 @@ public class MainActivity extends Activity {
   private SeekBar intervalBar;
   private TextView[] modeChoices=new TextView[3];
   private int seconds=8,page=0,mode=0;
-  private boolean playing=false,locked=false;
+  private boolean playing=false,locked=false,userReading=false;
+  private static final long READING_IDLE_MS=60000L;
+  private final Runnable resumeAfterReading=()->{if(playing && !locked && fullscreen && pdf!=null){userReading=false;timer();toast("已恢復自動翻頁");}};
   private final String[] modes={"滑動翻頁","淡入淡出","模擬立體翻頁"};
-  private final Runnable tick=new Runnable(){public void run(){if(playing && !locked && pdf!=null){book.advance();handler.postDelayed(this,seconds*1000L);}}};
+  private final Runnable tick=new Runnable(){public void run(){if(playing && !locked && !userReading && pdf!=null && fullscreen){book.advance();handler.postDelayed(this,seconds*1000L);}}};
 
   private int dp(float n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
   private GradientDrawable background(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
@@ -40,10 +42,16 @@ public class MainActivity extends Activity {
   }
   private void heading(LinearLayout parent,String s){TextView t=text(s,13,0xff637083);t.setTypeface(null,1);parent.addView(t);}
   private void updateStatus(){status.setText(pdf==null?"尚未選擇 PDF":pdf.getPageCount()+" 頁 · 第 "+(page+1)+" / "+pdf.getPageCount());}
-  private void timer(){handler.removeCallbacks(tick);if(playing&&!locked&&pdf!=null)handler.postDelayed(tick,seconds*1000L);}
+  private void timer(){handler.removeCallbacks(tick);if(playing&&!locked&&!userReading&&pdf!=null&&fullscreen)handler.postDelayed(tick,seconds*1000L);}
+  private void stopReadingPause(){userReading=false;handler.removeCallbacks(resumeAfterReading);}
+  private void registerReaderTouch(){
+    if(!fullscreen || !playing || locked || pdf==null)return;
+    userReading=true;handler.removeCallbacks(tick);handler.removeCallbacks(resumeAfterReading);
+    handler.postDelayed(resumeAfterReading,READING_IDLE_MS);
+  }
   private String hash(String pin){try{byte[] b=MessageDigest.getInstance("SHA-256").digest(("ScreenWake-v2:"+pin).getBytes("UTF-8"));StringBuilder sb=new StringBuilder();for(byte v:b)sb.append(String.format("%02x",v&255));return sb.toString();}catch(Exception e){return "";}}
   private String savedPin(){return getPreferences(0).getString("pin","");}
-  private void lockNow(){if(savedPin().isEmpty()){setupPin();return;}locked=true;playing=false;playButton.setText("開始展示");timer();controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
+  private void lockNow(){if(savedPin().isEmpty()){setupPin();return;}locked=true;playing=false;stopReadingPause();playButton.setText("開始展示");timer();controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
   private void setupPin(){
     final EditText input=new EditText(this);input.setInputType(18);input.setHint("4–8 位數字密碼");input.setSingleLine(true);
     new AlertDialog.Builder(this).setTitle(savedPin().isEmpty()?"設定密碼":"更改密碼").setMessage("請設定 4 至 8 位數字密碼。請妥善保管，密碼無法復原。").setView(input).setNegativeButton("取消",null).setPositiveButton("儲存",(d,w)->{
@@ -93,11 +101,11 @@ public class MainActivity extends Activity {
     updateModes();
     addSpace(controls,24);
     playButton=action(controls,"開始展示",true,()->{
-      if(pdf==null){toast("請先選擇 PDF 文件");return;}playing=!playing;playButton.setText(playing?"暫停展示":"開始展示");timer();
+      if(pdf==null){toast("請先選擇 PDF 文件");return;}playing=!playing;stopReadingPause();playButton.setText(playing?"暫停展示":"開始展示");timer();
     });
     addSpace(controls,10);
     action(controls,"全螢幕預覽",false,()->{
-      if(pdf==null){toast("Choose a PDF first");return;}
+      if(pdf==null){toast("請先選擇 PDF 文件");return;}
       enterFullscreen();
     });
     addSpace(controls,28);heading(controls,"安全設定");addSpace(controls,10);
@@ -112,7 +120,7 @@ public class MainActivity extends Activity {
     book=new BookView(this);book.setBackground(background(0xffE9EAE7,12));
     LinearLayout.LayoutParams previewParams=new LinearLayout.LayoutParams(-1,dp(216));previewParams.bottomMargin=dp(24);
     root.addView(book,1,previewParams);
-    book.setOnClickListener(v->{if(pdf!=null&&!locked)book.advance();});
+    book.setOnClickListener(v->{if(pdf!=null&&!locked&&!playing)book.advance();});
     if(!savedPin().isEmpty()){locked=true;controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
   }
   @Override protected void onActivityResult(int request,int result,Intent data){
@@ -120,7 +128,7 @@ public class MainActivity extends Activity {
     try{
       Uri uri=data.getData();getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);
       if(pdf!=null)pdf.close();if(fd!=null)fd.close();
-      fd=getContentResolver().openFileDescriptor(uri,"r");pdf=new PdfRenderer(fd);page=0;playing=false;playButton.setText("開始自動翻頁");book.clear();book.loadPage();updateStatus();timer();
+      fd=getContentResolver().openFileDescriptor(uri,"r");pdf=new PdfRenderer(fd);page=0;playing=false;stopReadingPause();playButton.setText("開始展示");book.clear();book.loadPage();updateStatus();timer();
     }catch(Exception e){new AlertDialog.Builder(this).setMessage("無法開啟 PDF："+e.getMessage()).setPositiveButton("OK",null).show();}
   }
   private Bitmap render(int n){
@@ -145,11 +153,11 @@ public class MainActivity extends Activity {
     book.setBackgroundColor(Color.BLACK);
     screen.addView(book,new FrameLayout.LayoutParams(-1,-1));
     getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
-    book.invalidate();
+    book.invalidate();timer();
   }
   private void exitFullscreen(){
     if(!fullscreen)return;
-    fullscreen=false;screen.removeView(book);root.addView(book,1,new LinearLayout.LayoutParams(-1,dp(216)));
+    fullscreen=false;stopReadingPause();timer();screen.removeView(book);root.addView(book,1,new LinearLayout.LayoutParams(-1,dp(216)));
     book.setBackground(background(0xffE9EAE7,12));scroll.setVisibility(View.VISIBLE);
     getWindow().getDecorView().setSystemUiVisibility(0);book.invalidate();
   }
@@ -157,11 +165,17 @@ public class MainActivity extends Activity {
     if(fullscreen&&!locked){exitFullscreen();}
     else super.onBackPressed();
   }
+  @Override protected void onPause(){super.onPause();handler.removeCallbacks(tick);handler.removeCallbacks(resumeAfterReading);}
+  @Override protected void onResume(){super.onResume();if(userReading){handler.removeCallbacks(resumeAfterReading);handler.postDelayed(resumeAfterReading,READING_IDLE_MS);}else timer();}
   @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(book!=null)book.clear();if(pdf!=null)pdf.close();try{if(fd!=null)fd.close();}catch(Exception ignored){}super.onDestroy();}
   private class BookView extends View {
     private Bitmap current,next;private boolean animating=false;private long started;
     private final Paint paint=new Paint(3);
     BookView(Context c){super(c);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+    @Override public boolean onTouchEvent(android.view.MotionEvent event){
+      if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN){registerReaderTouch();}
+      return super.onTouchEvent(event);
+    }
     void clear(){if(current!=null&&!current.isRecycled())current.recycle();if(next!=null&&!next.isRecycled())next.recycle();current=null;next=null;animating=false;invalidate();}
     void loadPage(){if(current!=null&&!current.isRecycled())current.recycle();current=render(page);invalidate();}
     void advance(){
