@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
   }
   private void showPinPrompt(boolean can離開){
     final EditText input=new EditText(this);input.setInputType(18);input.setHint("輸入密碼");
-    AlertDialog dialog=new AlertDialog.Builder(this).setTitle("閱讀器已鎖定").setMessage("輸入密碼以解鎖 Screen Wake。").setView(input).set取消able(false)
+    AlertDialog dialog=new AlertDialog.Builder(this).setTitle("閱讀器已鎖定").setMessage("輸入密碼以解鎖 Screen Wake。").setView(input).setCancelable(false)
       .setPositiveButton("解鎖",null).setNegativeButton("離開",(d,w)->finish()).create();
     dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{
       if(hash(input.getText().toString()).equals(savedPin())){locked=false;controls.setVisibility(View.VISIBLE);book.setVisibility(View.VISIBLE);dialog.dismiss();}
