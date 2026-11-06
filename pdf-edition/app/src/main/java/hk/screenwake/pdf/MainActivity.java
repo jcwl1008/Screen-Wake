@@ -17,12 +17,15 @@ public class MainActivity extends Activity {
   private PdfRenderer pdf;
   private ParcelFileDescriptor fd;
   private BookView book;
-  private LinearLayout controls;
+  private LinearLayout controls, root;
+  private FrameLayout screen;
+  private ScrollView scroll;
+  private boolean fullscreen=false;
   private TextView status, intervalText, playButton, modeButton, lockButton;
   private SeekBar intervalBar;
-  private int seconds=8,page=0,mode=0;
+  private int 秒=8,page=0,mode=0;
   private boolean playing=false,locked=false;
-  private final String[] modes={"Slide","Fade","3D Flip"};
+  private final String[] modes={"滑動翻頁","淡入淡出","模擬立體翻頁"};
   private final Runnable tick=new Runnable(){public void run(){if(playing && !locked && pdf!=null){book.advance();handler.postDelayed(this,seconds*1000L);}}};
 
   private int dp(float n){return (int)(getResources().getDisplayMetrics().density*n+0.5f);}
@@ -35,69 +38,69 @@ public class MainActivity extends Activity {
     parent.addView(t,new LinearLayout.LayoutParams(-1,dp(54)));t.setOnClickListener(v->click.run());return t;
   }
   private void heading(LinearLayout parent,String s){TextView t=text(s,13,0xff637083);t.setLetterSpacing(0.07f);parent.addView(t);}
-  private void updateStatus(){status.setText(pdf==null?"No PDF selected":pdf.getPageCount()+" pages  ·  Page "+(page+1)+" of "+pdf.getPageCount());}
+  private void updateStatus(){status.setText(pdf==null?"尚未選擇 PDF":pdf.getPageCount()+" 頁 · 第 "+(page+1)+" / "+pdf.getPageCount());}
   private void timer(){handler.removeCallbacks(tick);if(playing&&!locked&&pdf!=null)handler.postDelayed(tick,seconds*1000L);}
   private String hash(String pin){try{byte[] b=MessageDigest.getInstance("SHA-256").digest(("ScreenWake-v2:"+pin).getBytes("UTF-8"));StringBuilder sb=new StringBuilder();for(byte v:b)sb.append(String.format("%02x",v&255));return sb.toString();}catch(Exception e){return "";}}
   private String savedPin(){return getPreferences(0).getString("pin","");}
-  private void lockNow(){if(savedPin().isEmpty()){setupPin();return;}locked=true;playing=false;playButton.setText("Start auto flip");timer();controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
+  private void lockNow(){if(savedPin().isEmpty()){setupPin();return;}locked=true;playing=false;playButton.setText("開始自動翻頁");timer();controls.setVisibility(View.GONE);book.setVisibility(View.GONE);showPinPrompt(true);}
   private void setupPin(){
-    final EditText input=new EditText(this);input.setInputType(18);input.setHint("4–8 digit PIN");input.setSingleLine(true);
-    new AlertDialog.Builder(this).setTitle(savedPin().isEmpty()?"Set a password":"Change password").setMessage("Use a 4–8 digit PIN to protect the reader. Keep it safe; there is no PIN recovery.").setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save",(d,w)->{
-      String pin=input.getText().toString();if(!pin.matches("[0-9]{4,8}")){toast("PIN must be 4–8 digits");return;}
-      getPreferences(0).edit().putString("pin",hash(pin)).apply();lockButton.setText("Lock reader");toast("PIN saved");
+    final EditText input=new EditText(this);input.setInputType(18);input.setHint("4–8 位數字密碼");input.setSingleLine(true);
+    new AlertDialog.Builder(this).setTitle(savedPin().isEmpty()?"設定密碼":"更改密碼").setMessage("Use a 4–8 位數字密碼 to protect the reader. Keep it safe; there is no PIN recovery.").setView(input).setNegativeButton("取消",null).setPositiveButton("儲存",(d,w)->{
+      String pin=input.getText().toString();if(!pin.matches("[0-9]{4,8}")){toast("密碼必須為 4 至 8 位數字");return;}
+      getPreferences(0).edit().putString("pin",hash(pin)).apply();lockButton.setText("鎖定閱讀器");toast("密碼已儲存");
     }).show();
   }
-  private void showPinPrompt(boolean canExit){
-    final EditText input=new EditText(this);input.setInputType(18);input.setHint("Enter PIN");
-    AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Reader locked").setMessage("Enter your PIN to unlock Screen Wake.").setView(input).setCancelable(false)
-      .setPositiveButton("Unlock",null).setNegativeButton("Exit",(d,w)->finish()).create();
+  private void showPinPrompt(boolean can離開){
+    final EditText input=new EditText(this);input.setInputType(18);input.setHint("輸入密碼");
+    AlertDialog dialog=new AlertDialog.Builder(this).setTitle("閱讀器已鎖定").setMessage("輸入密碼以解鎖 Screen Wake。").setView(input).set取消able(false)
+      .setPositiveButton("解鎖",null).setNegativeButton("離開",(d,w)->finish()).create();
     dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{
       if(hash(input.getText().toString()).equals(savedPin())){locked=false;controls.setVisibility(View.VISIBLE);book.setVisibility(View.VISIBLE);dialog.dismiss();}
-      else{input.setText("");input.setError("Incorrect PIN");}
+      else{input.setText("");input.setError("密碼錯誤");}
     }));dialog.show();
   }
   private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
   @Override public void onCreate(Bundle state){
     super.onCreate(state);getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     mode=getPreferences(0).getInt("mode",0);seconds=getPreferences(0).getInt("interval",8);
-    ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(0xfff8f9fc);
-    LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(22),dp(24),dp(22),dp(20));scroll.addView(root);setContentView(scroll);
+    scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(0xfff8f9fc);
+    root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(22),dp(24),dp(22),dp(20));scroll.addView(root);screen=new FrameLayout(this);screen.addView(scroll,new FrameLayout.LayoutParams(-1,-1));setContentView(screen);
     controls=new LinearLayout(this);controls.setOrientation(LinearLayout.VERTICAL);root.addView(controls);
     TextView title=text("Screen Wake",29,0xff152238);title.setTypeface(null,1);controls.addView(title);
-    TextView sub=text("PDF Reader  ·  v2",14,0xff6a7587);controls.addView(sub);addSpace(controls,26);
-    heading(controls,"YOUR DOCUMENT");addSpace(controls,10);
-    action(controls,"Choose PDF",true,()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/pdf");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK);});
-    addSpace(controls,10);status=text("No PDF selected",14,0xff647084);controls.addView(status);addSpace(controls,24);
-    heading(controls,"AUTO PAGE TURN");addSpace(controls,12);
-    intervalText=text("Every "+seconds+" seconds",17,0xff1b2940);intervalText.setTypeface(null,1);controls.addView(intervalText);
+    TextView sub=text("PDF 閱讀器 · v3",14,0xff6a7587);controls.addView(sub);addSpace(controls,26);
+    heading(controls,"PDF 文件");addSpace(controls,10);
+    action(controls,"選擇 PDF",true,()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/pdf");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,PICK);});
+    addSpace(controls,10);status=text("尚未選擇 PDF",14,0xff647084);controls.addView(status);addSpace(controls,24);
+    heading(controls,"自動翻頁");addSpace(controls,12);
+    intervalText=text("每隔 "+seconds+" 秒",17,0xff1b2940);intervalText.setTypeface(null,1);controls.addView(intervalText);
     intervalBar=new SeekBar(this);intervalBar.setMax(298);intervalBar.setProgress(seconds-2);controls.addView(intervalBar);
     intervalBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-      public void onProgressChanged(SeekBar b,int value,boolean user){seconds=value+2;intervalText.setText("Every "+seconds+" seconds");if(user){getPreferences(0).edit().putInt("interval",seconds).apply();timer();}}
+      public void onProgressChanged(SeekBar b,int value,boolean user){seconds=value+2;intervalText.setText("每隔 "+seconds+" 秒");if(user){getPreferences(0).edit().putInt("interval",seconds).apply();timer();}}
       public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
     });
-    TextView hint=text("2–300 seconds between pages",12,0xff788395);controls.addView(hint);addSpace(controls,22);
-    heading(controls,"PAGE ANIMATION");addSpace(controls,10);
-    modeButton=action(controls,modes[mode]+"  ·  Change style",false,()->{
-      new AlertDialog.Builder(this).setTitle("Choose page animation").setSingleChoiceItems(modes,mode,(d,which)->{
-        mode=which;getPreferences(0).edit().putInt("mode",mode).apply();modeButton.setText(modes[mode]+"  ·  Change style");d.dismiss();
-      }).setNegativeButton("Cancel",null).show();
+    TextView hint=text("每頁間隔可設定 2 至 300 秒",12,0xff788395);controls.addView(hint);addSpace(controls,22);
+    heading(controls,"翻頁效果");addSpace(controls,10);
+    modeButton=action(controls,modes[mode]+" · 選擇效果",false,()->{
+      new AlertDialog.Builder(this).setTitle("選擇翻頁效果").setSingleChoiceItems(modes,mode,(d,which)->{
+        mode=which;getPreferences(0).edit().putInt("mode",mode).apply();modeButton.setText(modes[mode]+" · 選擇效果");d.dismiss();
+      }).setNegativeButton("取消",null).show();
     });
     addSpace(controls,24);
-    playButton=action(controls,"Start auto flip",true,()->{
-      if(pdf==null){toast("Choose a PDF first");return;}playing=!playing;playButton.setText(playing?"Pause auto flip":"Start auto flip");timer();
+    playButton=action(controls,"開始自動翻頁",true,()->{
+      if(pdf==null){toast("Choose a PDF first");return;}playing=!playing;playButton.setText(playing?"暫停自動翻頁":"開始自動翻頁");timer();
     });
     addSpace(controls,10);
-    action(controls,"Open full screen",false,()->{
+    action(controls,"全螢幕閱讀",false,()->{
       if(pdf==null){toast("Choose a PDF first");return;}
-      controls.setVisibility(View.GONE);getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
+      enterFullscreen();
     });
-    addSpace(controls,26);heading(controls,"PRIVACY");addSpace(controls,10);
-    lockButton=action(controls,savedPin().isEmpty()?"Set password":"Lock reader",false,()->lockNow());
-    TextView privacy=text("PIN protection for this reader",12,0xff788395);privacy.setPadding(0,dp(8),0,0);controls.addView(privacy);
-    if(!savedPin().isEmpty()){addSpace(controls,10);action(controls,"Change PIN",false,()->{
-      final EditText old=new EditText(this);old.setInputType(18);old.setHint("Current PIN");
-      new AlertDialog.Builder(this).setTitle("Verify current PIN").setView(old).setNegativeButton("Cancel",null).setPositiveButton("Continue",(d,w)->{
-        if(hash(old.getText().toString()).equals(savedPin()))setupPin();else toast("Incorrect PIN");
+    addSpace(controls,26);heading(controls,"密碼保護");addSpace(controls,10);
+    lockButton=action(controls,savedPin().isEmpty()?"設定密碼":"鎖定閱讀器",false,()->lockNow());
+    TextView privacy=text("以數字密碼保護閱讀器",12,0xff788395);privacy.setPadding(0,dp(8),0,0);controls.addView(privacy);
+    if(!savedPin().isEmpty()){addSpace(controls,10);action(controls,"更改密碼",false,()->{
+      final EditText old=new EditText(this);old.setInputType(18);old.setHint("目前密碼");
+      new AlertDialog.Builder(this).setTitle("驗證目前密碼").setView(old).setNegativeButton("取消",null).setPositiveButton("繼續",(d,w)->{
+        if(hash(old.getText().toString()).equals(savedPin()))setupPin();else toast("密碼錯誤");
       }).show();
     });}
     addSpace(root,24);
@@ -111,8 +114,8 @@ public class MainActivity extends Activity {
     try{
       Uri uri=data.getData();getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);
       if(pdf!=null)pdf.close();if(fd!=null)fd.close();
-      fd=getContentResolver().openFileDescriptor(uri,"r");pdf=new PdfRenderer(fd);page=0;playing=false;playButton.setText("Start auto flip");book.clear();book.loadPage();updateStatus();timer();
-    }catch(Exception e){new AlertDialog.Builder(this).setMessage("Unable to open PDF: "+e.getMessage()).setPositiveButton("OK",null).show();}
+      fd=getContentResolver().openFileDescriptor(uri,"r");pdf=new PdfRenderer(fd);page=0;playing=false;playButton.setText("開始自動翻頁");book.clear();book.loadPage();updateStatus();timer();
+    }catch(Exception e){new AlertDialog.Builder(this).setMessage("無法開啟 PDF："+e.getMessage()).setPositiveButton("OK",null).show();}
   }
   private Bitmap render(int n){
     if(pdf==null)return null;
@@ -123,7 +126,7 @@ public class MainActivity extends Activity {
     }catch(Exception e){return null;}
   }
   @Override public void onBackPressed(){
-    if(controls.getVisibility()==View.GONE&&!locked){controls.setVisibility(View.VISIBLE);getWindow().getDecorView().setSystemUiVisibility(0);}
+    if(fullscreen&&!locked){exitFullscreen();}
     else super.onBackPressed();
   }
   @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(book!=null)book.clear();if(pdf!=null)pdf.close();try{if(fd!=null)fd.close();}catch(Exception ignored){}super.onDestroy();}
@@ -141,8 +144,8 @@ public class MainActivity extends Activity {
     }
     private void bitmap(Canvas canvas,Bitmap b,float x,float y,float w,float h){if(b!=null&&!b.isRecycled())canvas.drawBitmap(b,null,new RectF(x,y,x+w,y+h),paint);}
     @Override protected void onDraw(Canvas c){
-      super.onDraw(c);c.drawColor(0xffe8ecf3);
-      if(current==null){paint.setColor(0xff8995a7);paint.setTextSize(dp(16));c.drawText("PDF preview",dp(20),getHeight()/2f,paint);return;}
+      super.onDraw(c);c.drawColor(fullscreen?Color.BLACK:0xffe8ecf3);
+      if(current==null){paint.setColor(0xff8995a7);paint.setTextSize(dp(16));c.drawText("PDF 預覽",dp(20),getHeight()/2f,paint);return;}
       float scale=Math.min((float)getWidth()/current.getWidth(),(float)getHeight()/current.getHeight());
       float w=current.getWidth()*scale,h=current.getHeight()*scale,x=(getWidth()-w)/2,y=(getHeight()-h)/2;
       paint.setColor(Color.WHITE);paint.setAlpha(255);
