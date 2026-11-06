@@ -30,13 +30,13 @@ jobs:
         with:
           gradle-version: '8.10.2'
       - run: gradle :app:assembleDebug --no-daemon
-      - run: cp app/build/outputs/apk/debug/app-debug.apk ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.1.apk
+      - run: cp app/build/outputs/apk/debug/app-debug.apk ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.2.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.1
-          path: pdf-edition/ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.1.apk
+          name: ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.2
+          path: pdf-edition/ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.2.apk
       - name: Publish installable APK to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create pdf-unslop-v4.1.0 ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.1.apk --repo "$GITHUB_REPOSITORY" --title "Screen Wake PDF · Unslop UI v4.1.0" --notes "繁體中文 PDF 閱讀器：顧客觸碰螢幕暫停自動翻頁，閒置 60 秒後自動恢復；另支援三款翻頁動畫、自動循環、PIN 密碼及全螢幕閱讀。Android 9+。此為 GitHub Actions debug 簽署版本，請先在實機測試。" --latest=false
+          gh release create pdf-unslop-v4.2.0 ScreenWake_Simple_AutoFlip_PDF_Unslop_v4.2.apk --repo "$GITHUB_REPOSITORY" --title "Screen Wake PDF · Unslop UI v4.2.0" --notes "繁體中文 PDF 閱讀器：新增品牌 App 圖示、版本更新紀錄及字型載入支援；顧客觸碰螢幕暫停自動翻頁，閒置 60 秒後自動恢復；另支援三款翻頁動畫、自動循環、PIN 密碼及全螢幕閱讀。Android 9+。此為 GitHub Actions debug 簽署版本，請先在實機測試。" --latest=false
